@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/banzaicloud/pipeline/pkg/brn"
 	"github.com/banzaicloud/pipeline/pkg/cloud"
+	"github.com/banzaicloud/pipeline/pkg/sdk/brn"
 )
 
 func TestNewRawNodePool(t *testing.T) {
