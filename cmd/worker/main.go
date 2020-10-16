@@ -394,12 +394,14 @@ func main() {
 		registerAzureWorkflows(secretStore, tokenGenerator, azurePKEClusterStore)
 
 		// Register EKS specific workflows
-		err = registerEKSWorkflows(config, secret.Store, eksClusters, eksadapter.NewNodePoolStore(db))
+		clusterStore := clusteradapter.NewStore(db, clusteradapter.NewClusters(db))
+		clusterDynamicClientFactory := cluster2.NewDynamicClientFactory(clusterStore, kubernetes.NewDynamicClientFactory(configFactory))
+
+		err = registerEKSWorkflows(config, secret.Store, eksClusters, eksadapter.NewNodePoolStore(db), clusterDynamicClientFactory)
 		if err != nil {
 			emperror.Panic(errors.WrapIf(err, "failed to register EKS workflows"))
 		}
 
-		clusterStore := clusteradapter.NewStore(db, clusteradapter.NewClusters(db))
 		vsphereClusterStore := vsphereadapter.NewClusterStore(db)
 
 		cgroupAdapter := cgroupAdapter.NewClusterGetter(clusterManager)
@@ -490,8 +492,6 @@ func main() {
 		}
 
 		{
-			workflow.RegisterWithOptions(clusterworkflow.DeleteNodePoolWorkflow, workflow.RegisterOptions{Name: clusterworkflow.DeleteNodePoolWorkflowName})
-
 			createNodePoolActivity := clusterworkflow.NewCreateNodePoolActivity(
 				clusterStore,
 				db,
@@ -509,19 +509,6 @@ func main() {
 			activity.RegisterWithOptions(createNodePoolLabelSetActivity.Execute, activity.RegisterOptions{Name: clusterworkflow.CreateNodePoolLabelSetActivityName})
 
 			workflow.RegisterWithOptions(clusterworkflow.CreateNodePoolWorkflow, workflow.RegisterOptions{Name: clusterworkflow.CreateNodePoolWorkflowName})
-
-			deleteNodePoolActivity := clusterworkflow.NewDeleteNodePoolActivity(
-				clusterStore,
-				clusteradapter.NewNodePoolStore(db, clusterStore),
-				eksworkflow.NewAWSSessionFactory(secret.Store),
-			)
-			activity.RegisterWithOptions(deleteNodePoolActivity.Execute, activity.RegisterOptions{Name: clusterworkflow.DeleteNodePoolActivityName})
-
-			deleteNodePoolLabelSetActivity := clusterworkflow.NewDeleteNodePoolLabelSetActivity(
-				cluster2.NewDynamicClientFactory(clusterStore, kubernetes.NewDynamicClientFactory(configFactory)),
-				config.Cluster.Labels.Namespace,
-			)
-			activity.RegisterWithOptions(deleteNodePoolLabelSetActivity.Execute, activity.RegisterOptions{Name: clusterworkflow.DeleteNodePoolLabelSetActivityName})
 
 			setClusterStatusActivity := clusterworkflow.NewSetClusterStatusActivity(clusterStore)
 			activity.RegisterWithOptions(setClusterStatusActivity.Execute, activity.RegisterOptions{Name: clusterworkflow.SetClusterStatusActivityName})
