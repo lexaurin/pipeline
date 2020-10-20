@@ -21,10 +21,15 @@ import (
 	"emperror.dev/errors"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
-	"go.uber.org/zap"
+
+	"github.com/banzaicloud/pipeline/pkg/sdk/brn"
+	"github.com/banzaicloud/pipeline/pkg/sdk/cadence/lib/pipeline/processlog"
 )
 
-const CreateClusterWorkflowName = "pke-create-cluster"
+const (
+	CreateClusterWorkflowName = "pke-create-cluster"
+	signalName                = "node-bootstrapped"
+)
 
 type TokenGenerator interface {
 	GenerateClusterToken(orgID, clusterID uint) (string, string, error)
@@ -44,10 +49,24 @@ type CreateClusterWorkflowInput struct {
 }
 
 type CreateClusterWorkflow struct {
-	GlobalRegion string
+	GlobalRegion  string
+	processLogger processlog.ProcessLogger
 }
 
-func (w CreateClusterWorkflow) Execute(ctx workflow.Context, input CreateClusterWorkflowInput) error {
+func NewCreateClusterWorkflow(globalRegion string) CreateClusterWorkflow {
+	return CreateClusterWorkflow{
+		GlobalRegion:  globalRegion,
+		processLogger: processlog.New(),
+	}
+}
+
+func (w CreateClusterWorkflow) Execute(ctx workflow.Context, input CreateClusterWorkflowInput) (err error) {
+	clusterID := brn.New(input.OrganizationID, brn.ClusterResourceType, fmt.Sprint(input.ClusterID))
+	process := w.processLogger.StartProcess(ctx, clusterID.String())
+	defer func() {
+		process.Finish(ctx, err)
+	}()
+
 	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: 10 * time.Minute,
 		StartToCloseTimeout:    20 * time.Minute,
@@ -120,7 +139,7 @@ func (w CreateClusterWorkflow) Execute(ctx workflow.Context, input CreateCluster
 		}
 	}
 
-	err := forEachNodePool(nodePools, func(nodePool *NodePool) (err error) {
+	err = forEachNodePool(nodePools, func(nodePool *NodePool) (err error) {
 		nodePool.ImageID, nodePool.VolumeSize, err = SelectImageAndVolumeSize(
 			ctx,
 			awsActivityInput,
@@ -368,15 +387,14 @@ func (w CreateClusterWorkflow) Execute(ctx workflow.Context, input CreateCluster
 		}
 	}
 
-	signalName := "master-ready"
 	signalChan := workflow.GetSignalChannel(ctx, signalName)
 
-	s := workflow.NewSelector(ctx)
-	s.AddReceive(signalChan, func(c workflow.Channel, more bool) {
-		c.Receive(ctx, nil)
-		workflow.GetLogger(ctx).Info("Received signal!", zap.String("signal", signalName))
-	})
-	s.Select(ctx)
+	var signalValue interface{}
+	signalChan.Receive(ctx, &signalValue)
+
+	if errVal, ok := signalValue.(error); ok {
+		return errors.Wrap(errVal, "failed to start node")
+	}
 
 	if len(nodePools) == 1 {
 		err := workflow.ExecuteActivity(ctx, SetMasterTaintActivityName, SetMasterTaintActivityInput{

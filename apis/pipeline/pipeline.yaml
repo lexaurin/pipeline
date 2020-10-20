@@ -2359,8 +2359,12 @@ paths:
                         schema:
                             $ref: '#/components/schemas/PostPKENodeStatusRequest'
             responses:
-                200:
+                202:
                     description: "Success"
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PostPKENodeStatusResponse'
                 default:
                     $ref: '#/components/responses/Error'
 
@@ -4698,6 +4702,14 @@ components:
             type: array
             items:
                 $ref: '#/components/schemas/NodePoolSummary'
+
+
+        PostPKENodeStatusResponse:
+            type: object
+            properties:
+                processId:
+                    description: ID of the registered process
+                    type: string
 
         NodePoolSummary:
             allOf:
@@ -7670,6 +7682,9 @@ components:
                 nullable: true
                 format: date-time
                 description: exact time of event
+              processId:
+                description: ID of the process registered earlier (register new process if empty)
+                type: string
 
         PKEClusterReadinessResponse:
             type: object
@@ -8474,6 +8489,8 @@ components:
                 log:
                     type: string
                 resourceId:
+                    type: string
+                resourceType:
                     type: string
                 status:
                     $ref: '#/components/schemas/ProcessStatus'

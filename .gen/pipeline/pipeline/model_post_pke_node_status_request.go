@@ -39,4 +39,7 @@ type PostPkeNodeStatusRequest struct {
 
 	// exact time of event
 	Timestamp *time.Time `json:"timestamp,omitempty"`
+
+	// ID of the process registered earlier (register new process if empty)
+	ProcessId string `json:"processId,omitempty"`
 }

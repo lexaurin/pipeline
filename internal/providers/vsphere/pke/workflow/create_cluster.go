@@ -35,7 +35,10 @@ import (
 	"github.com/banzaicloud/pipeline/src/cluster"
 )
 
-const CreateClusterWorkflowName = "pke-vsphere-create-cluster"
+const (
+	CreateClusterWorkflowName = "pke-vsphere-create-cluster"
+	signalName                = "node-bootstrapped"
+)
 
 // CreateClusterWorkflowInput
 type CreateClusterWorkflowInput struct {
@@ -276,7 +279,6 @@ func getHostPort(o intPKE.HTTPProxyOptions) string {
 }
 
 func waitForMasterReadySignal(ctx workflow.Context, timeout time.Duration) error {
-	signalName := "master-ready"
 	signalChan := workflow.GetSignalChannel(ctx, signalName)
 	signalTimeoutTimer := workflow.NewTimer(ctx, timeout)
 	signalTimeout := false

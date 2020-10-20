@@ -31,16 +31,17 @@ const (
 )
 
 type processModel struct {
-	ID         string              `gorm:"primary_key"`
-	ParentID   string              `gorm:"index"`
-	OrgID      uint                `gorm:"not null"`
-	Type       string              `gorm:"not null"`
-	Log        string              `gorm:"type:text"`
-	ResourceID string              `gorm:"not null"`
-	Status     string              `gorm:"not null"`
-	StartedAt  time.Time           `gorm:"index:idx_start_time_end_time;default:current_timestamp;not null"`
-	FinishedAt *time.Time          `gorm:"index:idx_start_time_end_time"`
-	Events     []processEventModel `gorm:"foreignkey:ProcessID"`
+	ID           string              `gorm:"primary_key"`
+	ParentID     string              `gorm:"index"`
+	OrgID        uint                `gorm:"not null"`
+	Type         string              `gorm:"not null"`
+	Log          string              `gorm:"type:text"`
+	ResourceID   string              `gorm:"not null"`
+	ResourceType string              `gorm:"not null"`
+	Status       string              `gorm:"not null"`
+	StartedAt    time.Time           `gorm:"index:idx_start_time_end_time;default:current_timestamp;not null"`
+	FinishedAt   *time.Time          `gorm:"index:idx_start_time_end_time"`
+	Events       []processEventModel `gorm:"foreignkey:ProcessID"`
 }
 
 // TableName changes the default table name.
@@ -96,15 +97,16 @@ func (s *GormStore) GetProcess(ctx context.Context, id string) (process.Process,
 	}
 
 	p := process.Process{
-		Id:         pm.ID,
-		ParentId:   pm.ParentID,
-		OrgId:      int32(pm.OrgID),
-		Type:       pm.Type,
-		Log:        pm.Log,
-		StartedAt:  pm.StartedAt,
-		FinishedAt: pm.FinishedAt,
-		ResourceId: pm.ResourceID,
-		Status:     process.ProcessStatus(pm.Status),
+		Id:           pm.ID,
+		ParentId:     pm.ParentID,
+		OrgId:        int32(pm.OrgID),
+		Type:         pm.Type,
+		Log:          pm.Log,
+		StartedAt:    pm.StartedAt,
+		FinishedAt:   pm.FinishedAt,
+		ResourceId:   pm.ResourceID,
+		ResourceType: pm.ResourceType,
+		Status:       process.ProcessStatus(pm.Status),
 	}
 
 	for _, em := range processEvents {
@@ -134,15 +136,16 @@ func (s *GormStore) ListProcesses(ctx context.Context, query process.Process) ([
 
 	for _, pm := range processes {
 		p := process.Process{
-			Id:         pm.ID,
-			ParentId:   pm.ParentID,
-			OrgId:      int32(pm.OrgID),
-			Log:        pm.Log,
-			StartedAt:  pm.StartedAt,
-			FinishedAt: pm.FinishedAt,
-			ResourceId: pm.ResourceID,
-			Type:       pm.Type,
-			Status:     process.ProcessStatus(pm.Status),
+			Id:           pm.ID,
+			ParentId:     pm.ParentID,
+			OrgId:        int32(pm.OrgID),
+			Log:          pm.Log,
+			StartedAt:    pm.StartedAt,
+			FinishedAt:   pm.FinishedAt,
+			ResourceId:   pm.ResourceID,
+			ResourceType: pm.ResourceType,
+			Type:         pm.Type,
+			Status:       process.ProcessStatus(pm.Status),
 		}
 
 		var processEvents []processEventModel

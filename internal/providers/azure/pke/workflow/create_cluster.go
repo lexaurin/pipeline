@@ -30,7 +30,10 @@ import (
 	"github.com/banzaicloud/pipeline/src/cluster"
 )
 
-const CreateClusterWorkflowName = "pke-azure-create-cluster"
+const (
+	CreateClusterWorkflowName = "pke-azure-create-cluster"
+	signalName                = "node-bootstrapped"
+)
 
 // CreateClusterWorkflowInput
 type CreateClusterWorkflowInput struct {
@@ -170,7 +173,6 @@ func CreateClusterWorkflow(ctx workflow.Context, input CreateClusterWorkflowInpu
 }
 
 func waitForMasterReadySignal(ctx workflow.Context, timeout time.Duration) error {
-	signalName := "master-ready"
 	signalChan := workflow.GetSignalChannel(ctx, signalName)
 	signalTimeoutTimer := workflow.NewTimer(ctx, timeout)
 	signalTimeout := false
