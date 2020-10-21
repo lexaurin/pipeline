@@ -130,9 +130,6 @@ func registerEKSWorkflows(
 	waitELBsDeletionActivity := eksworkflow.NewWaitELBsDeletionActivity(awsSessionFactory)
 	activity.RegisterWithOptions(waitELBsDeletionActivity.Execute, activity.RegisterOptions{Name: eksworkflow.WaitELBsDeletionActivityName})
 
-	getNodepoolStacksActivity := eksworkflow.NewGetNodepoolStacksActivity(awsSessionFactory)
-	activity.RegisterWithOptions(getNodepoolStacksActivity.Execute, activity.RegisterOptions{Name: eksworkflow.GetNodepoolStacksActivityName})
-
 	deleteNodePoolLabelSetActivity := eksworkflow.NewDeleteNodePoolLabelSetActivity(
 		clusterDynamicClientFactory,
 		config.Cluster.Labels.Namespace,
@@ -160,6 +157,11 @@ func registerEKSWorkflows(
 
 	getOrphanNicsActivity := eksworkflow.NewGetOrphanNICsActivity(awsSessionFactory)
 	activity.RegisterWithOptions(getOrphanNicsActivity.Execute, activity.RegisterOptions{Name: eksworkflow.GetOrphanNICsActivityName})
+
+	listStoredNodePoolsActivity := eksworkflow.NewListStoredNodePoolsActivity(nodePoolStore)
+	activity.RegisterWithOptions(listStoredNodePoolsActivity.Execute, activity.RegisterOptions{
+		Name: eksworkflow.ListStoredNodePoolsActivityName,
+	})
 
 	deleteOrphanNicActivity := eksworkflow.NewDeleteOrphanNICActivity(awsSessionFactory)
 	activity.RegisterWithOptions(deleteOrphanNicActivity.Execute, activity.RegisterOptions{Name: eksworkflow.DeleteOrphanNICActivityName})

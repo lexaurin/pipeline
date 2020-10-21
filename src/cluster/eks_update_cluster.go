@@ -72,8 +72,7 @@ func NewEKSUpdateClusterWorkflow(nodePoolStore eks.NodePoolStore) (eksUpdateClus
 func waitForActivities(asgFutures []workflow.Future, ctx workflow.Context, clusterID uint) error {
 	errs := make([]error, len(asgFutures))
 	for i, future := range asgFutures {
-		var activityOutput eksWorkflow.CreateAsgActivityOutput
-		errs[i] = pkgCadence.UnwrapError(future.Get(ctx, &activityOutput))
+		errs[i] = pkgCadence.UnwrapError(future.Get(ctx, nil))
 	}
 	if err := errors.Combine(errs...); err != nil {
 		_ = eksWorkflow.SetClusterStatus(ctx, clusterID, pkgCluster.Warning, err.Error())
@@ -166,12 +165,17 @@ func (w EKSUpdateClusterWorkflow) Execute(ctx workflow.Context, input EKSUpdateC
 			log.Info("node pool will be deleted")
 			nodePoolsToDelete[nodePool.Name] = nodePool
 
-			activityInput := eksWorkflow.DeleteStackActivityInput{
-				EKSActivityInput: commonActivityInput,
-				StackName:        eksWorkflow.GenerateNodePoolStackName(input.ClusterName, nodePool.Name),
+			activityInput := eksWorkflow.DeleteNodePoolWorkflowInput{
+				ClusterID:                 input.ClusterID,
+				ClusterName:               input.ClusterName,
+				NodePoolName:              nodePool.Name,
+				OrganizationID:            input.OrganizationID,
+				Region:                    input.Region,
+				SecretID:                  input.SecretID,
+				ShouldUpdateClusterStatus: false,
 			}
 			ctx = workflow.WithActivityOptions(ctx, aoWithHeartBeat)
-			f := workflow.ExecuteActivity(ctx, eksWorkflow.DeleteStackActivityName, activityInput)
+			f := workflow.ExecuteChildWorkflow(ctx, eksWorkflow.DeleteNodePoolWorkflowName, activityInput)
 			asgFutures = append(asgFutures, f)
 		}
 	}
